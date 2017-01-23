@@ -41,21 +41,32 @@ class Projects:
         result = issue_request(method='GET', endpoint=endpoint, token=self.token)
         return result
 
+    def search(self, search, limit=100):
+        """
+        Use to return the results of a search query at the projects endpoint.
+        :param search: String containing the figshare query. See 'https://docs.figshare.com/Search/search/'.
+        :param limit: Sets the maximum number of results to add to the return.
+        :return: List of dictionaries.
+        """
+        # Construct the figshare search query. See 'https://docs.figshare.com/Search/search/' for more info.
+        data = {"search_for": search}
+        endpoint = 'account/projects/search?limit={limit}'.format(limit=limit)
+
+        # Issue HTTP request. Will return a list dictionaries each with information on an existing project that has met
+        # the search parameters.
+        result = issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
+
+        return result
+
     def check_if_exists(self, search):
         """
         Use to search your figshare projects for existing projects with the exact same title as input.
-        :param search: string containing the title name to search for.
+        :param search: string containing the title name to search for. See 'https://docs.figshare.com/Search/search/'.
         :return: True, if title already exists. False, if it does not.
         """
 
-        # Construct the figshare search query. See 'https://docs.figshare.com/Search/search/' for more info.
-        data = {
-            "search_for": "'{search}'".format(search=search)
-        }
-        # Issue HTTP request. Will return a list dictionaries each with information on an existing project that has met
-        # the search parameters.
         # Ideally this will either be a single project if the title is already in use.
-        result = issue_request(method='POST', endpoint='account/projects/search', data=data, token=self.token)
+        result = self.search(search)
 
         # Check to see that returned result has the same title as that searched for.
         for project in range(len(result)):
@@ -179,11 +190,11 @@ class Projects:
         # Construct an endpoint from the project_id given.
         endpoint = 'account/projects/{project_id}'.format(project_id=project_id)
 
-        result = issue_request(method='PUT', endpoint=endpoint, data=data, token=self.token)
+        issue_request(method='PUT', endpoint=endpoint, data=data, token=self.token)
         if config.verbose:
             print('Project: {project_id} updated'.format(project_id=project_id))
 
-        project_info = raw_issue_request(method='GET', url=result['location'], token=self.token)
+        project_info = self.get_info(project_id=project_id)
 
         return project_info
 
