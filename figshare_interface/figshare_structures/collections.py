@@ -45,7 +45,9 @@ class Collections:
     def get_articles(self, collection_id, limit=100):
         """
         Returns a list of articles in the given article.
+
         :param collection_id: Integer of figshare collection id number.
+        :param limit: Defines the maximum number of articles to be returned.
         :return: List of collection articles.
         """
         endpoint = 'account/collections/{id}/articles?limit={limit}'.format(id=collection_id, limit=limit)
