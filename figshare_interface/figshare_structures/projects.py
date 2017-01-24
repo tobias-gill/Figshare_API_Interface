@@ -198,30 +198,45 @@ class Projects:
 
         return project_info
 
-    def delete(self, project_id):
+    def delete(self, project_id, safe=False):
         """
-        Use to delete a Figshare project given a project id.
+        Use to delete a Figshare project given a project id. A confirmation is required.
         :param project_id: Integer of a Figshare project id.
         :return:
         """
+
+        # Get the information of the given project.
         project_info = self.get_info(project_id)
 
+        # Format a string for input confirmation.
         confirmation_str = 'Are you sure you want to delete project: {id}.\n{title}'.format(project_id,
                                                                                             project_info['title'])
-        confirmation = input(confirmation_str)
+        if safe:
+            # If in default safe mode ask for confirmation.
+            # Ask use to confirm that they want to delete the project found.
+            confirmation = input(confirmation_str)
+        elif not safe:
+            # If set to unsafe automatically set confirmation to yes.
+            confirmation = 'y'
+
+        # Lists for valid responses to input.
         confirmation_yes = ['y', 'Y', 'yes', 'Yes', 'YES']
         confirmation_no = ['n', 'N', 'no', 'No', 'NO']
 
         if confirmation in confirmation_yes:
+            # If the delete is confirmed then proceed.
             # Construct an endpoint from the given project_id.
             endpoint = 'account/projects/{id}'.format(id=project_id)
 
+            # Issue deletion request.
             issue_request(method='DELETE', endpoint=endpoint, token=self.token)
             if config.verbose:
                 print('Deleted Project: ', project_id, '.')
         elif confirmation in confirmation_no:
+            # If deletion is canceled.
             print('Project: {id}. deletion canceled.')
         else:
+            # If input response is unknown.
             print('Unknown response: {resp}. Project not deleted.'.format(resp=confirmation))
 
     def list_articles(self, project_id, limit=100):
