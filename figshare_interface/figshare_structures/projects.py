@@ -199,13 +199,30 @@ class Projects:
         return project_info
 
     def delete(self, project_id):
+        """
+        Use to delete a Figshare project given a project id.
+        :param project_id: Integer of a Figshare project id.
+        :return:
+        """
+        project_info = self.get_info(project_id)
 
-        # Construct an endpoint from the given project_id.
-        endpoint = 'account/projects/{id}'.format(id=project_id)
+        confirmation_str = 'Are you sure you want to delete project: {id}.\n{title}'.format(project_id,
+                                                                                            project_info['title'])
+        confirmation = input(confirmation_str)
+        confirmation_yes = ['y', 'Y', 'yes', 'Yes', 'YES']
+        confirmation_no = ['n', 'N', 'no', 'No', 'NO']
 
-        issue_request(method='DELETE', endpoint=endpoint, token=self.token)
-        if config.verbose:
-            print('Deleted Project: ', project_id, '.')
+        if confirmation in confirmation_yes:
+            # Construct an endpoint from the given project_id.
+            endpoint = 'account/projects/{id}'.format(id=project_id)
+
+            issue_request(method='DELETE', endpoint=endpoint, token=self.token)
+            if config.verbose:
+                print('Deleted Project: ', project_id, '.')
+        elif confirmation in confirmation_no:
+            print('Project: {id}. deletion canceled.')
+        else:
+            print('Unknown response: {resp}. Project not deleted.'.format(resp=confirmation))
 
     def list_articles(self, project_id, limit=100):
 
@@ -220,11 +237,8 @@ class Projects:
 
     def search_articles(self, search, limit=100):
 
-        data = {
-            "search_for": search,
-            "limit": limit
-        }
-        endpoint = 'account/articles/search'
+        data = {"search_for": search}
+        endpoint = 'account/articles/search?limit={limit}'.format(limit=limit)
         result = issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
 
         return result
@@ -241,7 +255,7 @@ class Projects:
         return result
 
     def create_article(self, project_id, article_data):
-        # FIXME: This is currently very specific to stm files. Find a way to generalise.
+        # FIXME: This will become quite large when more metadata structures are created. Find a better way.
 
         # Remove references key if no entry.
         if article_data['references'][0] == '':
