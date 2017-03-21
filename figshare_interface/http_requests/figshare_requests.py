@@ -110,7 +110,7 @@ def initiate_new_upload(article_id, file_name, token):
     :return:
     """
 
-    endpoint = 'account/articles/{article_id}/files'  # Un-formatted endpoint for file upload.
+    endpoint = 'account/figshare_articles/{article_id}/files'  # Un-formatted endpoint for file upload.
     endpoint = endpoint.format(article_id=article_id)  # Formatted endpoint for file upload.
 
     md5, size = get_file_check_data(file_name)  # Get file md5 encoding and file size.
@@ -184,6 +184,56 @@ def complete_upload(article_id, file_id, token):
     :param token: Authentication token.
     :return:
     """
-    endpoint = 'account/articles/{article_id}/files/{file_id}'
+    endpoint = 'account/figshare_articles/{article_id}/files/{file_id}'
     endpoint = endpoint.format(article_id=article_id, file_id=file_id)
     issue_request(method='POST', endpoint=endpoint, token=token)
+
+
+def login_request(username, password):
+    """
+
+    """
+
+    data = {"client_id": "398a42c3675ad74b49c55c62285f6e59c909c845",
+            "client_secret": "929211ae89dde8771cedef21affe75938884b7a7402569daf45ae58e6639f5efe26b2ca29eb8b32012881cecea400a932076f2ba0606074c91ce59672314fdb7",
+            "grant_type": "password",
+            "username": username,
+            "password": password}
+
+    data = json.dumps(data)
+
+    url = "https://api.figsh.com/v2/token"
+    header = {"content-type": "application/json"}
+    # Raise request to API.
+    response = requests.request(method='POST', url=url, data=data, headers=header)
+    try:
+        # Raises stored HTTPError, if one occurred.
+        response.raise_for_status()
+        try:
+            # The response of the request is in bytes. Therefore is decoded to a string before being decoded by JSON.
+            str_response = response.content.decode('utf-8')
+            data = json.loads(str_response)
+            OAuth_token = data['token']
+
+        except ValueError:
+            # If the response can not be decoded raise a value error, returning the response contents.
+            data = response.content
+
+    except HTTPError as error:
+        # If HTTPError occurs raise and print details from contents.
+        print('Caught an HTTPError: {}'.format(error))
+        print('Body:\n', response.content)
+        raise
+
+    # Return the decoded data from a successful request.
+    return OAuth_token
+
+
+def download_file(url, local_filename, token):
+
+    header = {'Authorization': 'token ' + token}
+    r = requests.get(url=url, stream=True, headers=header)
+    if r.status_code == 200:
+        with open(local_filename, 'wb') as f:
+            for chunk in r.iter_content(1048576):
+                f.write(chunk)

@@ -19,6 +19,12 @@ Set-up From Config File.
 
 # Read Config File and Extract Information
 config_file = os.path.abspath(__file__ + '/../' + 'figshare_interface.config')
+
+if os.path.isfile(config_file):
+    config_file_exist = True
+else:
+    pass
+
 config = configparser.ConfigParser()
 config.read(config_file)
 

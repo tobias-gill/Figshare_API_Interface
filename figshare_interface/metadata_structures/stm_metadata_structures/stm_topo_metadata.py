@@ -14,7 +14,7 @@ class stm_topo_metadata(article_metadata):
     """
     Child of the base figshare article_metadata class.
 
-    This class adds additional meta_data specific to STM topography articles.
+    This class adds additional meta_data specific to STM topography figshare_articles.
     """
     def __init__(self, input_dict):
         """

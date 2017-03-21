@@ -44,13 +44,13 @@ class Collections:
 
     def get_articles(self, collection_id, limit=100):
         """
-        Returns a list of articles in the given article.
+        Returns a list of figshare_articles in the given article.
 
         :param collection_id: Integer of figshare collection id number.
-        :param limit: Defines the maximum number of articles to be returned.
-        :return: List of collection articles.
+        :param limit: Defines the maximum number of figshare_articles to be returned.
+        :return: List of collection figshare_articles.
         """
-        endpoint = 'account/collections/{id}/articles?limit={limit}'.format(id=collection_id, limit=limit)
+        endpoint = 'account/collections/{id}/figshare_articles?limit={limit}'.format(id=collection_id, limit=limit)
         result = issue_request(method='GET', endpoint=endpoint, token=self.token)
         return result
 
@@ -146,11 +146,11 @@ class Collections:
         update_categories = False
         update_references = False
 
-        # Check articles.
+        # Check figshare_articles.
         if articles is not None:
             self.check_arg(articles, [int])
             if len(articles) <= 10:
-                args_name.append('articles')
+                args_name.append('figshare_articles')
                 args.append(articles)
             else:
                 update_required = True
@@ -215,8 +215,8 @@ class Collections:
         if update_required:
             if update_articles:
                 for subsec in list(self.chunks(articles, 10)):
-                    data = {'articles': subsec}
-                    endpoint = 'account/collections/{collection_id}/articles'.format(collection_id=collection_id)
+                    data = {'figshare_articles': subsec}
+                    endpoint = 'account/collections/{collection_id}/figshare_articles'.format(collection_id=collection_id)
                     issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
                 if config.verbose:
                     print('Articles added to collection: {id}'.format(id=collection_id))
@@ -262,7 +262,7 @@ class Collections:
 
     def publish_article(self, article_id):
 
-        endpoint = 'account/articles/{article_id}/publish'.format(article_id=article_id)
+        endpoint = 'account/figshare_articles/{article_id}/publish'.format(article_id=article_id)
         result = issue_request(method='POST', endpoint=endpoint, token=self.token)
 
         if config.verbose:

@@ -198,10 +198,15 @@ class Projects:
 
         return project_info
 
-    def delete(self, project_id, safe=False):
+    def delete(self, project_id, safe=True):
         """
         Use to delete a Figshare project given a project id. A confirmation is required.
+
+        Arguments
         :param project_id: Integer of a Figshare project id.
+
+        Optional Arguments
+        :param safe: Boolean that can be used to override the project deletion confirmation.
         :return:
         """
 
@@ -209,21 +214,22 @@ class Projects:
         project_info = self.get_info(project_id)
 
         # Format a string for input confirmation.
-        confirmation_str = 'Are you sure you want to delete project: {id}.\n{title}'.format(project_id,
-                                                                                            project_info['title'])
+        confirmation_str = 'Are you sure you want to delete project: {id}.\n{title}'.format(id=project_id,
+                                                                                            title=project_info['title'])
+        confirmation_resp = ''
         if safe:
             # If in default safe mode ask for confirmation.
             # Ask use to confirm that they want to delete the project found.
-            confirmation = input(confirmation_str)
+            confirmation_resp = input(confirmation_str)
         elif not safe:
             # If set to unsafe automatically set confirmation to yes.
-            confirmation = 'y'
+            confirmation_resp = 'y'
 
         # Lists for valid responses to input.
         confirmation_yes = ['y', 'Y', 'yes', 'Yes', 'YES']
         confirmation_no = ['n', 'N', 'no', 'No', 'NO']
 
-        if confirmation in confirmation_yes:
+        if confirmation_resp in confirmation_yes:
             # If the delete is confirmed then proceed.
             # Construct an endpoint from the given project_id.
             endpoint = 'account/projects/{id}'.format(id=project_id)
@@ -232,28 +238,31 @@ class Projects:
             issue_request(method='DELETE', endpoint=endpoint, token=self.token)
             if config.verbose:
                 print('Deleted Project: ', project_id, '.')
-        elif confirmation in confirmation_no:
+        elif confirmation_resp in confirmation_no:
             # If deletion is canceled.
             print('Project: {id}. deletion canceled.')
         else:
             # If input response is unknown.
-            print('Unknown response: {resp}. Project not deleted.'.format(resp=confirmation))
+            print('Unknown response: {resp}. Project not deleted.'.format(resp=confirmation_resp))
 
-    def list_articles(self, project_id, limit=100):
+    def list_articles(self, project_id, page_size=100, page=1):
 
         # Construct an endpoint from the given project_id.
-        endpoint = 'account/projects/{id}/articles?limit={limit}'.format(id=project_id, limit=limit)
-
-        # Get a list of articles under project.
-        result = issue_request(method='GET', endpoint=endpoint, token=self.token)
+        endpoint = 'account/projects/{id}/articles'.format(id=project_id)
+        data = {"page_size": page_size,
+                "page": page}
+        # Get a list of figshare_articles under project.
+        result = issue_request(method='GET', endpoint=endpoint, data=data, token=self.token)
 
         # Return result list.
         return result
 
-    def search_articles(self, search, limit=100):
+    def search_articles(self, search, limit=100, offset=1):
 
-        data = {"search_for": search}
-        endpoint = 'account/articles/search?limit={limit}'.format(limit=limit)
+        data = {"search_for": search,
+                "page_size": limit,
+                "page": offset}
+        endpoint = 'account/articles/search'.format(limit=limit)
         result = issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
 
         return result
@@ -270,13 +279,14 @@ class Projects:
         return result
 
     def create_article(self, project_id, article_data):
-        # FIXME: This will become quite large when more metadata structures are created. Find a better way.
 
         # Remove references key if no entry.
         if article_data['references'][0] == '':
             del article_data['references']
 
-        # Determine what kind of article to create.
+        """
+        FIXME: This is really specific to STM files. May need to generalise this either using file endings or new param.
+        """
         if article_data['type'] == 'topo':
             article_data = stm_topo_metadata(article_data).get_data()
         elif article_data['type'] == 'ivcurve':
@@ -287,7 +297,7 @@ class Projects:
             raise ValueError('File type: {type} is not yet supported'.format(type=article_data['type']))
 
         # Check to see if article already exists in project.
-        article_list = self.list_articles(project_id)  # Get list of articles associated with project.
+        article_list = self.list_articles(project_id)  # Get list of figshare_articles associated with project.
         article_list_titles = []
         for article in article_list:
             article_list_titles.append(article['title'])
@@ -307,12 +317,42 @@ class Projects:
 
             return result['id']
 
+    @staticmethod
+    def update_article(token, article_id, article_data):
+
+        # Check the structure of input parameters to see if they meet requirements for figshare inputs.
+        # Title Checks.
+        if 'title' in article_data:  # If an updated title is provided
+            if not type(article_data['title']) == str:  # Checks to see if title is a string.
+                raise TypeError('title is not a string')
+            # Checks to see if the length of title is between 3 and 500 chars.
+            elif not len(article_data['title']) > 3 & len(article_data['title']) < 501:
+                raise ValueError('Title is not between 3 and 500 characters long.')
+
+        if 'funding' in article_data:
+            if not type(article_data['funding']) == str:  # Checks to see if funding is a string.
+                raise TypeError('funding is not a string')
+            elif not len(article_data['funding']) < 2001:  # Checks to see if the funding string is under 2000 characters long.
+                raise ValueError('funding string is longer than 2000 characters.')
+
+        if 'references' in article_data:
+            if article_data['references'] == '':
+                del article_data['references']
+            elif article_data['references'] == ['[]']:
+                del article_data['references']
+            elif article_data['references'] is []:
+                del article_data['references']
+
+        endpoint = 'account/articles/{id}'.format(id=article_id)
+
+        issue_request(method='PUT', endpoint=endpoint, data=article_data, token=token)
+
     def list_files(self, article_id):
 
         # Construct an endpoint from the given project_id.
         endpoint = 'account/articles/{article_id}/files'.format(article_id=article_id)
 
-        # Get a list of articles under project.
+        # Get a list of figshare_articles under project.
         result = issue_request(method='GET', endpoint=endpoint, token=self.token)
 
         # Return result list.
