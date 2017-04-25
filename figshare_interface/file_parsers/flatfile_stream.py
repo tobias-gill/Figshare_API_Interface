@@ -1,6 +1,3 @@
-#!/usr/bin/env python2.7
-# -*- coding: utf-8 -*-
-
 """
 
     \mainpage Python Matrix Flat File Parser
@@ -33,6 +30,8 @@
 
 
     \section Updates
+    2017-03 tgill:
+        Altered the input to accept a byte stream rather than a file path.
     2016-12 tgill:
         Altered to be compatible with python 3.
     2016-04 tgill:
@@ -719,11 +718,11 @@ class FlatFile():
 
         return self.data
 
-def load(stream):
+def load(name, stream):
     """Loader function for further data processing
     Return a list of DataArray object"""
 
-    ff = FlatFile(stream)
+    ff = FlatFile(name, stream)
     return ff.getData()
 
 if __name__ == "__main__":

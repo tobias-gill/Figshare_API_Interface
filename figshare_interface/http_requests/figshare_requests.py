@@ -110,7 +110,7 @@ def initiate_new_upload(article_id, file_name, token):
     :return:
     """
 
-    endpoint = 'account/figshare_articles/{article_id}/files'  # Un-formatted endpoint for file upload.
+    endpoint = 'account/articles/{article_id}/files'  # Un-formatted endpoint for file upload.
     endpoint = endpoint.format(article_id=article_id)  # Formatted endpoint for file upload.
 
     md5, size = get_file_check_data(file_name)  # Get file md5 encoding and file size.
@@ -184,7 +184,7 @@ def complete_upload(article_id, file_id, token):
     :param token: Authentication token.
     :return:
     """
-    endpoint = 'account/figshare_articles/{article_id}/files/{file_id}'
+    endpoint = 'account/articles/{article_id}/files/{file_id}'
     endpoint = endpoint.format(article_id=article_id, file_id=file_id)
     issue_request(method='POST', endpoint=endpoint, token=token)
 
@@ -237,3 +237,5 @@ def download_file(url, local_filename, token):
         with open(local_filename, 'wb') as f:
             for chunk in r.iter_content(1048576):
                 f.write(chunk)
+
+    return r.status_code

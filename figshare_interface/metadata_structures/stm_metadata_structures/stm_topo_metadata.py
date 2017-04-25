@@ -6,7 +6,7 @@ Figshare Article Metadata Structure for STM Topography data.
 
 
 """
-
+import os
 from ..base_figshare_metadata import *
 
 
@@ -58,15 +58,18 @@ class stm_topo_metadata(article_metadata):
             del input_dict['runcycle']
 
         # Convert some information from the flatfile to the format required for figshare.
-        input_dict['title'] = input_dict['filename'].split('\\')[-1]  # Extracts the filename as a title.
+        if 'filename' in input_dict:
+            input_dict['title'] = input_dict['filename'].split('\\')[-1]  # Extracts the filename as a title.
 
         # If a description is already provided add the flatfile comment to the description.
         if 'description' in input_dict:
-            input_dict['description'] += input_dict['comment']
-
-        # If no description exists create one from the flatfile comment.
+            if 'comment' in input_dict:
+                input_dict['description'] += input_dict['comment']
         else:
-            input_dict['description'] = input_dict['comment']
+            if 'comment' in input_dict:
+                input_dict['description'] = input_dict['comment']
+            else:
+                input_dict['description'] = ''
 
         # Delete now redundant information from the flatfile.
         if 'comment' in input_dict:
@@ -137,6 +140,10 @@ class stm_topo_metadata(article_metadata):
             # If the key, value pair belongs to the STM topography metadata add it to the figshare custom_fields dict.
             elif key in self.model_stm_topo_structure:
                 output_dir['custom_fields'][key] = value
+
+            elif key == 'custom_fields':
+                for k, v in self.reformatted_dict['custom_fields'].items():
+                    output_dir['custom_fields'][k] = v
 
         # Return the figshare ready dictionary.
         return output_dir

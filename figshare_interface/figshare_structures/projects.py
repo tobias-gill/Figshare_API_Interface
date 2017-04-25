@@ -181,22 +181,66 @@ class Projects:
                 raise ValueError('funding string is longer than 2000 characters.')
             else:
                 data['funding'] = funding
+
         if group_id is not None:
             if not type(group_id) == int:  # Checks to see id group_id is an integer.
                 raise TypeError('group_id is not an integer.')
             else:
                 data['group_id'] = group_id
 
-        # Construct an endpoint from the project_id given.
-        endpoint = 'account/projects/{project_id}'.format(project_id=project_id)
+        if data != {}:
+            # Construct an endpoint from the project_id given.
+            endpoint = 'account/projects/{project_id}'.format(project_id=project_id)
 
-        issue_request(method='PUT', endpoint=endpoint, data=data, token=self.token)
-        if config.verbose:
-            print('Project: {project_id} updated'.format(project_id=project_id))
+            issue_request(method='PUT', endpoint=endpoint, data=data, token=self.token)
+            if config.verbose:
+                print('Project: {project_id} updated'.format(project_id=project_id))
 
-        project_info = self.get_info(project_id=project_id)
+            project_info = self.get_info(project_id=project_id)
 
-        return project_info
+            return project_info
+
+    def invite(self, project_id, collaborator):
+        """
+
+        :param project_id:
+        :param collaborator:
+        :return:
+        """
+        if collaborator is not None:
+            if type(collaborator) != dict:
+                raise TypeError('Collaborators are not dict')
+            for key, value in collaborator.items():
+                print(key, ':', value)
+                if key == 'email':
+                    print('test')
+                if key not in ['user_id', 'role_name', 'email']:
+                    raise ValueError('Collaborator dictionary has unknown key: {}'.format(key))
+                elif key == 'user_id':
+                    if type(value) != int:
+                        print(3)
+                        raise TypeError('Collaborator id not an integer')
+                elif key == 'email':
+                    if type(value) != str:
+                        print(4)
+                        raise TypeError('Collaborator name is not a string')
+                elif key == 'role':
+                    if value not in ['owner', 'collaborator', 'viewer']:
+                        raise ValueError('Collaborator role is not either: owner, collaborator or viewer')
+
+            data = collaborator
+
+            # Construct an endpoint from the project_id given.
+            endpoint = 'account/projects/{project_id}/collaborators'.format(project_id=project_id)
+
+            issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
+
+            if config.verbose:
+                print('Collaborators invited to Project: {project_id}'.format(project_id=project_id))
+
+            project_info = self.get_info(project_id=project_id)
+            print('invited')
+            return project_info
 
     def delete(self, project_id, safe=True):
         """
@@ -219,7 +263,7 @@ class Projects:
         confirmation_resp = ''
         if safe:
             # If in default safe mode ask for confirmation.
-            # Ask use to confirm that they want to delete the project found.
+            # Ask user to confirm that they want to delete the project found.
             confirmation_resp = input(confirmation_str)
         elif not safe:
             # If set to unsafe automatically set confirmation to yes.
@@ -251,21 +295,53 @@ class Projects:
         endpoint = 'account/projects/{id}/articles'.format(id=project_id)
         data = {"page_size": page_size,
                 "page": page}
-        # Get a list of figshare_articles under project.
+        all_results = []
+
         result = issue_request(method='GET', endpoint=endpoint, data=data, token=self.token)
+        for r in result:
+            all_results.append(r)
+        num_results = len(result)
+        page += 1
 
+        while num_results >= page_size:
+            data = {"page_size": page_size,
+                    "page": page}
+            # Get a list of figshare_articles under project.
+            result = issue_request(method='GET', endpoint=endpoint, data=data, token=self.token)
+            page += 1
+            for r in result:
+                all_results.append(r)
+            num_results = len(result)
         # Return result list.
-        return result
+        return all_results
 
-    def search_articles(self, search, limit=100, offset=1):
+    def search_articles(self, search, page_size=100, page=1):
+
+        endpoint = 'account/articles/search'
 
         data = {"search_for": search,
-                "page_size": limit,
-                "page": offset}
-        endpoint = 'account/articles/search'.format(limit=limit)
+                "page_size": page_size,
+                "page": page}
+
+        all_results = []
+
         result = issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
 
-        return result
+        for r in result:
+            all_results.append(r)
+        num_results = len(result)
+        page += 1
+
+        while num_results >= page_size:
+            data = {"search_for": search,
+                    "page_size": page_size,
+                    "page": page}
+            result = issue_request(method='POST', endpoint=endpoint, data=data, token=self.token)
+            page += 1
+            for r in result:
+                all_results.append(r)
+            num_results = len(result)
+        return all_results
 
     def get_article(self, project_id, article_id):
 
@@ -281,20 +357,24 @@ class Projects:
     def create_article(self, project_id, article_data):
 
         # Remove references key if no entry.
-        if article_data['references'][0] == '':
-            del article_data['references']
+        if 'references' in article_data:
+            if len(article_data['references']) == 0:
+                del article_data['references']
+            elif article_data['references'][0] == '':
+                del article_data['references']
 
         """
         FIXME: This is really specific to STM files. May need to generalise this either using file endings or new param.
         """
-        if article_data['type'] == 'topo':
-            article_data = stm_topo_metadata(article_data).get_data()
-        elif article_data['type'] == 'ivcurve':
-            article_data = stm_spec_metadata(article_data).get_data()
-        elif article_data['type'] == 'ivmap':
-            raise ValueError('File type: {type} is not yet supported'.format(type=article_data['type']))
-        elif article_data['type'] == 'izcurve':
-            raise ValueError('File type: {type} is not yet supported'.format(type=article_data['type']))
+        if 'type' in article_data:
+            if article_data['type'] == 'topo':
+                article_data = stm_topo_metadata(article_data).get_data()
+            elif article_data['type'] == 'ivcurve':
+                article_data = stm_spec_metadata(article_data).get_data()
+            elif article_data['type'] == 'ivmap':
+                raise ValueError('File type: {type} is not yet supported'.format(type=article_data['type']))
+            elif article_data['type'] == 'izcurve':
+                raise ValueError('File type: {type} is not yet supported'.format(type=article_data['type']))
 
         # Check to see if article already exists in project.
         article_list = self.list_articles(project_id)  # Get list of figshare_articles associated with project.
@@ -347,6 +427,15 @@ class Projects:
 
         issue_request(method='PUT', endpoint=endpoint, data=article_data, token=token)
 
+    @staticmethod
+    def publish_article(token, article_id):
+
+        endpoint = 'account/articles/{article_id}/publish'.format(article_id=article_id)
+        issue_request(method='POST', endpoint=endpoint, token=token)
+
+        if config.verbose:
+            print('Published article: {id}.'.format(id=article_id))
+
     def list_files(self, article_id):
 
         # Construct an endpoint from the given project_id.
@@ -370,12 +459,63 @@ class Projects:
         upload_parts(file_name=file_name, file_info=file_info, token=self.token)
         complete_upload(article_id=article_id, file_id=file_info['id'], token=self.token)
 
-    def article_delete(self, project_id, article_id):
+    @staticmethod
+    def download_file(url, local_filename, token):
+
+        header = {'Authorization': 'token ' + token}
+        r = requests.get(url=url, stream=True, headers=header)
+        if r.status_code == 200:
+            with open(local_filename, 'wb') as f:
+                for chunk in r.iter_content(1048576):
+                    f.write(chunk)
+
+    @staticmethod
+    def stream_file(url, token):
+
+        header = {'Authorization': 'token ' + token}
+        r = requests.get(url=url, stream=True, headers=header)
+        if r.status_code == 200:
+            return r.content
+
+    def stream_article(self, article_id, article_file=0):
+        """
+        Download a file associated with an figshare article, but hold it in memory in the form of a IO byte stream.
+        :param article_id: int. figshare article id
+        :return: tuple. (string, bytes) -> (file name, byte stream of file)
+        """
+
+        files = self.list_files(article_id)
+        file_name = files[article_file]['name']
+        download_url = files[article_file]['download_url']
+
+        file_stream = self.stream_file(download_url, self.token)
+
+        return file_name, file_stream
+
+    def article_delete(self, project_id: int, article_id: int):
+        """
+        Deletes an article from Figshare. Article is perenantly removed from Figshare, not just the project.
+
+        Args:
+            project_id: Figshare project ID number article is within.
+            article_id: Figshare article ID number.
+
+        Returns:
+            None
+
+        Raises:
+            HTTPError: If an error occurs during the deletion process the corresponding error message will be returned.
+        """
 
         # Construct an endpoint from the given project_id.
         endpoint = 'account/projects/{project_id}/articles/{article_id}'.format(project_id=project_id,
                                                                                 article_id=article_id)
+        try:
+            issue_request(method='DELETE', endpoint=endpoint, token=self.token)
+            return ''
+        except HTTPError as err:
+            err_resp = err.response
+            # err_code = err_resp.status_code
+            err_msg = err_resp.text
+            return err_msg
 
-        issue_request(method='DELETE', endpoint=endpoint, token=self.token)
-        print('Deleted Article: {article_id} in Project: {project_id}.'.format(article_id=article_id,
-                                                                               project_id=project_id))

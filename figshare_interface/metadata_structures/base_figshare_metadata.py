@@ -78,28 +78,32 @@ class article_metadata(object):
 
         # Check to see if the input dictionary has the keys for the mandatory metadata structure.
         for key, value in mandatory.items():
-            if key not in input_dict:
-                raise ValueError('input dictionary does not have mandatory key: {key}'.format(key=key))
-
+            if 'custom_fields' in input_dict:
+                if key not in input_dict and key not in input_dict['custom_fields']:
+                    raise ValueError('input dictionary does not have mandatory key: {key}'.format(key=key))
+            else:
+                if key not in input_dict:
+                    raise ValueError('input dictionary does not have mandatory key: {key}'.format(key=key))
         # Check to see if the input dictionary has keys that are wrong.
         for key, value in input_dict.items():
             # Checks to see if keys of input dictionary are in the model dictionary.
-            if key not in model:
-                raise ValueError('Unknown input dictionary key: {key}.'.format(key=key))
+            if key != 'custom_fields':
+                if key not in model:
+                    raise ValueError('Unknown input dictionary key: {key}.'.format(key=key))
 
-            # If the model dictionary key value is a list check to see if value in list are correct type.
-            if type(value) is list:
-                if type(value[0]) is not model[key][0]:
-                    err_message = 'input dictionary key: {ky} list type: {ty} is not {ref}'
-                    err_message = err_message.format(ky=key, ty=value[0], ref=model[key][0])
-                    raise ValueError(err_message)
+                # If the model dictionary key value is a list check to see if value in list are correct type.
+                if type(value) is list:
+                    if type(value[0]) is not model[key][0]:
+                        err_message = 'input dictionary key: {ky} list type: {ty} is not {ref}'
+                        err_message = err_message.format(ky=key, ty=value[0], ref=model[key][0])
+                        raise ValueError(err_message)
 
-            else:
-                # Checks to see if the type of the value for key is correct, in comparison to the model dictionary.
-                if type(value) is not model[key]:
-                    err_message = 'input dictionary key: {ky} type: {ty} is not {ref}'
-                    err_message = err_message.format(ky=key, ty=type(value), ref=model[key])
-                    raise ValueError(err_message)
+                else:
+                    # Checks to see if the type of the value for key is correct, in comparison to the model dictionary.
+                    if type(value) is not model[key]:
+                        err_message = 'input dictionary key: {ky} type: {ty} is not {ref}'
+                        err_message = err_message.format(ky=key, ty=type(value), ref=model[key])
+                        raise ValueError(err_message)
         return True
 
     def get_data(self, input_dict):

@@ -17,7 +17,7 @@ class ZyvexFile:
         if self.is_zad_file(filename):
 
             self.exp_info = {}
-            self.file_info = {}
+            self.info = {}
             self.scan_info = []
             self.data = []
 
@@ -100,35 +100,35 @@ class ZyvexFile:
             vernier_z = float(system_data.getAttribute('VernierZ'))
 
         file_data = doc.getElementsByTagName('FileData')[0]
-        self.file_info['file_name'] = file_data.getAttribute('FileName')
+        self.info['filename'] = file_data.getAttribute('FileName')
         # nb_name = file_data.getAttribute('NBName')
         # scanz_ver = file_data.getAttribute('SCANZver')
-        self.file_info['sample_name'] = file_data.getAttribute('SampleName')
-        self.file_info['tip_name'] = file_data.getAttribute('TipName')
-        self.file_info['user_id'] = file_data.getAttribute('UserID')
+        self.info['sample_name'] = file_data.getAttribute('SampleName')
+        self.info['tip_name'] = file_data.getAttribute('TipName')
+        self.info['user_id'] = file_data.getAttribute('UserID')
 
         scan_data = doc.getElementsByTagName('ScanData')[0]
         if version != '5':
             vernier_z = float(scan_data.getAttribute('VernierZ'))
         # center = scan_data.getAttribute('Center')
-        self.file_info['comments'] = scan_data.getAttribute('Comments')
+        self.info['comments'] = scan_data.getAttribute('Comments')
         # drift_auto = scan_data.getAttribute('DriftAuto')
         # drift_corr = scan_data.getAttribute('DriftCorr')
         # extra_dict = scan_data.getAttribute('ExtraDict')
-        self.file_info['image_size'] = scan_data.getAttribute('ImageSize')
-        self.file_info['sample_bias'] = scan_data.getAttribute('SampleBias')
-        self.file_info['scan_rotation'] = scan_data.getAttribute('ScanRotation')
-        self.file_info['scan_size'] = self.unpack_string(scan_data.getAttribute('ScanSize'))
-        self.file_info['scan_speed'] = scan_data.getAttribute('ScanSpeed')
-        self.file_info['set_point'] = scan_data.getAttribute('Setpoint')
-        self.file_info['time_created'] = scan_data.getAttribute('TimeCreated')
-        self.file_info['time_scan_done'] = scan_data.getAttribute('TimeScanDone')
+        self.info['image_size'] = scan_data.getAttribute('ImageSize')
+        self.info['vgap'] = scan_data.getAttribute('SampleBias')
+        self.info['scan_rotation'] = scan_data.getAttribute('ScanRotation')
+        self.info['scan_size'] = self.unpack_string(scan_data.getAttribute('ScanSize'))
+        self.info['scan_speed'] = scan_data.getAttribute('ScanSpeed')
+        self.info['current'] = scan_data.getAttribute('Setpoint')
+        self.info['date'] = scan_data.getAttribute('TimeCreated')
+        self.info['time_scan_done'] = scan_data.getAttribute('TimeScanDone')
         scan_bufs = scan_data.getElementsByTagName('ScanBuf')
 
-        self.file_info['xyunit'] = 'm'
-        self.file_info['iunit'] = 'A'
-        self.file_info['vunit'] = 'V'
-        self.file_info['zunit'] = 'm'
+        self.info['xyunit'] = 'm'
+        self.info['iunit'] = 'A'
+        self.info['vunit'] = 'V'
+        self.info['unit'] = 'm'
 
         for index, sb in enumerate(scan_bufs):
             scan_dict = {}
@@ -171,15 +171,17 @@ class ZyvexFile:
             a = numpy.asarray(raw_data, dtype='float')
             scan_dict['xres'] = int(dim_str[0])
             scan_dict['yres'] = int(dim_str[1])
-            scan_dict['xreal'] = float(self.file_info['scan_size'][0]) * 1e-9
-            scan_dict['yreal'] = float(self.file_info['scan_size'][1]) * 1e-9
+            scan_dict['xreal'] = float(self.info['scan_size'][0]) * 1e-9
+            scan_dict['yreal'] = float(self.info['scan_size'][1]) * 1e-9
 
             self.scan_info.append(scan_dict)
 
             if chan_name[0:4] == 'Topo':
                 a *= (calib_z * max_piezo_voltage * vernier_z / 10.0 * 1e-9 /
                       max_value)
+                self.info['type'] = 'topo'
             else:
                 a *= preamp_max_curr * 1e-9 / max_value
+                self.info['type'] = 'current'
 
             self.data.append(a)
